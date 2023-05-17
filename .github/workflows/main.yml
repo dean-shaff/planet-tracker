@@ -1,6 +1,6 @@
 name: Heroku Deploy
 
-on: [push, repository_dispatch]
+on: [push, repository_dispatch, workflow_dispatch]
   # push:
   # repository_dispatch:
 
