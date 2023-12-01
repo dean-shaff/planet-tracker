@@ -91,8 +91,9 @@ app = Litestar(
     route_handlers=[get_astron_object_data],
     static_files_config=[
         StaticFilesConfig(
-            directories=[public_dir / "dist", public_dir],
-            path="/"
+            directories=[public_dir / "dist"],
+            path="/",
+            html_mode=True
         ),
     ]
 )
