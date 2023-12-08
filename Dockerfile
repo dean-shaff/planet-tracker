@@ -9,7 +9,7 @@ RUN trunk build --release
 
 FROM python:3.11.7-slim-bookworm
 
-RUN apt-get update && apt-get install -y libssl-dev build-essential
+RUN apt-get update && apt-get install -y libssl-dev build-essential ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ENV POETRY_HOME=/opt/poetry
@@ -17,7 +17,7 @@ ENV POETRY_HOME=/opt/poetry
 RUN python -m venv ${POETRY_HOME}
 RUN ${POETRY_HOME}/bin/pip install poetry 
 
-COPY . .
+COPY poetry.lock pyproject.toml app.py ./ 
 COPY --from=builder /app/client/dist /app/dist
 RUN ${POETRY_HOME}/bin/poetry install
 
