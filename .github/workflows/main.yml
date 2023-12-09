@@ -1,10 +1,10 @@
-name: Heroku Deploy
+# name: Heroku Deploy
 
-on: [push, repository_dispatch, workflow_dispatch]
-  # push:
-  # repository_dispatch:
+# on: [push, repository_dispatch, workflow_dispatch]
+#   # push:
+#   # repository_dispatch:
 
-jobs:
+# jobs:
 
   # start-build-pipeline:
   #   runs-on: ubuntu-latest
@@ -17,60 +17,60 @@ jobs:
   #         -u ${{ secrets.ACCESS_TOKEN }} \
   #         --data '{"event_type": "start_build", "client_payload": { "repository": "'"$GITHUB_REPOSITORY"'" }}'
 
-  heroku-deploy:
-    if: (github.event.action == 'build' || github.event_name == 'push') && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-      # - name: Install Heroku CLI
-      #   run: sudo snap install --classic heroku
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.10.x
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python -
-          echo "${HOME}/.poetry/bin" >> $GITHUB_PATH
-      - name: Install package
-        run: |
-          poetry install
-          poetry update
-      - name: Recreate requirements.txt
-        run: |
-          poetry export -f requirements.txt --without-hashes > requirements.txt
-      - name: Pull latest changes from client repo
-        run: |
-          git submodule update --init --recursive
-          git pull --recurse-submodules
-          cd client
-          git pull origin master
-      - name: Setup Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - name: Build Client
-        run: |
-          cd client
-          npm install
-          npm run build:prod
-      - name: Copy index.html and dist directory from client
-        run: |
-          cp ./client/index.html ./public
-          cp -r ./client/dist/ ./public
-      - name: Push requirements.txt and new client changes to Github
-        run: |
-          git config --global user.name '${GITHUB_ACTOR}'
-          git config --global user.email '${GITHUB_ACTOR}@users.noreply.github.com'
-          git status
-          git add client public requirements.txt
-          git commit -m "update client, public and requirements.txt" || echo "No changes to commit"
-          git push origin ${GITHUB_REF##*/} || echo "No changes to commit"
-      - name: Start new Heroku build
-        run: |
-          curl -n -X POST https://api.heroku.com/apps/planet-tracker/builds \
-          -d '{"source_blob":{"url":"https://github.com/dean-shaff/planet-tracker/archive/master.tar.gz"}}' \
-          -H 'Accept: application/vnd.heroku+json; version=3' \
-          -H "Content-Type: application/json" \
-          -H "Authorization: Bearer ${{ secrets.HEROKU_API_KEY }}"
+  # heroku-deploy:
+  #   if: (github.event.action == 'build' || github.event_name == 'push') && github.ref == 'refs/heads/master'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # - name: Install Heroku CLI
+  #     #   run: sudo snap install --classic heroku
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Set up Python 3.x
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: 3.10.x
+  #     - name: Install Poetry
+  #       run: |
+  #         curl -sSL https://install.python-poetry.org | python -
+  #         echo "${HOME}/.poetry/bin" >> $GITHUB_PATH
+  #     - name: Install package
+  #       run: |
+  #         poetry install
+  #         poetry update
+  #     - name: Recreate requirements.txt
+  #       run: |
+  #         poetry export -f requirements.txt --without-hashes > requirements.txt
+  #     - name: Pull latest changes from client repo
+  #       run: |
+  #         git submodule update --init --recursive
+  #         git pull --recurse-submodules
+  #         cd client
+  #         git pull origin master
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v1
+  #       with:
+  #         node-version: 12.x
+  #     - name: Build Client
+  #       run: |
+  #         cd client
+  #         npm install
+  #         npm run build:prod
+  #     - name: Copy index.html and dist directory from client
+  #       run: |
+  #         cp ./client/index.html ./public
+  #         cp -r ./client/dist/ ./public
+  #     - name: Push requirements.txt and new client changes to Github
+  #       run: |
+  #         git config --global user.name '${GITHUB_ACTOR}'
+  #         git config --global user.email '${GITHUB_ACTOR}@users.noreply.github.com'
+  #         git status
+  #         git add client public requirements.txt
+  #         git commit -m "update client, public and requirements.txt" || echo "No changes to commit"
+  #         git push origin ${GITHUB_REF##*/} || echo "No changes to commit"
+  #     - name: Start new Heroku build
+  #       run: |
+  #         curl -n -X POST https://api.heroku.com/apps/planet-tracker/builds \
+  #         -d '{"source_blob":{"url":"https://github.com/dean-shaff/planet-tracker/archive/master.tar.gz"}}' \
+  #         -H 'Accept: application/vnd.heroku+json; version=3' \
+  #         -H "Content-Type: application/json" \
+  #         -H "Authorization: Bearer ${{ secrets.HEROKU_API_KEY }}"
