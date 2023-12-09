@@ -12,13 +12,14 @@ from litestar.static_files.config import StaticFilesConfig
 
 log = logging.getLogger(__name__)
 
-public_dir = Path("./client").resolve()
 
-if "MODE" in os.environ:
-    if os.environ["MODE"] == "production" or os.environ["MODE"] == "prod":
-        public_dir = Path("./dist").resolve()
+env = os.environ.get("ENVIRONMENT", "local")
 
-log.info(f"os.environ['MODE']={os.environ.get('MODE')}")
+if env == "local":
+    public_dir = Path("./client/dist").resolve()
+else:
+    public_dir = Path("/app/dist").resolve()
+
 log.info(f"public_dir={public_dir}")
 
 
@@ -119,7 +120,7 @@ app = Litestar(
     route_handlers=[search, get_astron_object_data],
     static_files_config=[
         StaticFilesConfig(
-            directories=[public_dir / "dist"],
+            directories=[public_dir],
             path="/",
             html_mode=True
         ),
