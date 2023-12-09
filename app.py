@@ -1,93 +1,130 @@
-import time
-import datetime
+from pathlib import Path
+from datetime import datetime
 import logging
 import os
 
+import geocoder
+from msgspec import Struct
 import ephem
-from aiohttp import web
+from litestar import Litestar, get
+from litestar.static_files.config import StaticFilesConfig
 
-__version__ = "3.1.1"
+
+__version__ = "4.0.0"
 
 
-logger = logging.getLogger("planet-tracker")
+log = logging.getLogger(__name__)
 
-public_dir = "./client"
+public_dir = Path("./client").resolve()
 
 if "MODE" in os.environ:
     if os.environ["MODE"] == "production" or os.environ["MODE"] == "prod":
-        public_dir = "./public"
+        public_dir = Path("./dist").resolve()
 
-logger.info(f"os.environ['MODE']={os.environ.get('MODE')}")
-logger.info(f"public_dir={public_dir}")
+log.info(f"os.environ['MODE']={os.environ.get('MODE')}")
+log.info(f"public_dir={public_dir}")
 
-routes = web.RouteTableDef()
-app = web.Application()
+
+class AstronObjectRequest(Struct):
+    name: str
+    lon: str
+    lat: str
+    elevation: float
+    when: datetime 
+
+
+class AstronObjectResponse(Struct):
+    name: str
+    magnitude: str
+    size: str
+    az: str
+    el: str
+    ra: str
+    dec: str
+    setting_time: datetime
+    rising_time: datetime
+    when: datetime
+
+
+class SearchItem(Struct):
+    name: str
+    country: str
+    sub_division: str
+    lat: float
+    lon: float
+
+
+class SearchResponse(Struct):
+    items: list[SearchItem]
 
 
 def init_observer():
-
     observer = ephem.Observer()
     observer.pressure = 0
     observer.epoch = ephem.J2000
     return observer
 
 
-@routes.get('/get_astron_object_data')
-async def get_astron_object_data(request):
-    """
-    Get data about an astronomical object
-    Args:
-        request (aiohttp.Request): containing the following dict:
-            - name: name of object
-            - when: string indicating when we want data
-            - geo_location: location for which we want ephemerides
-            - cb_name: name of client side callback event to fire
-    Returns:
-        None
-    """
-    logger.debug(f"get_astron_object_data")
-    data = request.query
-    observer = init_observer()
-    observer.lon = str(data["lon"])
-    observer.lat = str(data["lat"])
-    observer.elevation = float(data["elevation"])
-    when_str = str(data["when"])
-    when = datetime.datetime.strptime(
-        when_str,
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
-    observer.date = when
-    astron_obj_name = str(data["name"])
+@get("/search")
+async def search(
+    q: str,
+    max_results: int = 1,
+    fuzzy: float = 1.0
+) -> SearchResponse:
 
-    astron_obj = getattr(ephem, astron_obj_name)()
-    # self.app.logger.debug("get_astron_object_data: {}".format(astron_obj))
+    results = geocoder.geonames(q, key="dillpickle", maxRows=max_results, fuzzy=fuzzy)
+    items = [SearchItem(
+        name=g.address, 
+        country=g.country, 
+        sub_division=g.state,
+        lat=float(g.lat),
+        lon=float(g.lng)
+    ) for g in results]
+    return SearchResponse(items=items)
+
+
+@get('/get_astron_object_data')
+async def get_astron_object_data(
+    name: str,
+    lon: float,
+    lat: float,
+    elevation: float,
+    when: datetime,
+) -> AstronObjectResponse:
+    log.debug(f"get_astron_object_data")
+    observer = init_observer()
+    # we have to do a string conversion for pyephem to work!
+    observer.lon = str(lon)
+    observer.lat = str(lat)
+    observer.elevation = elevation
+    observer.date = when
+    astron_obj = getattr(ephem, name.capitalize())()
     astron_obj.compute(observer)
 
-    return_data = {
-        "name": astron_obj_name,
-        "magnitude": astron_obj.mag,
-        "size": astron_obj.size,
-        "az": astron_obj.az,
-        "el": astron_obj.alt,
-        "ra": astron_obj.ra,
-        "dec": astron_obj.dec,
-        "setting_time": str(observer.next_setting(astron_obj)),
-        "rising_time": str(observer.next_rising(astron_obj)),
-        "when": when_str
-    }
-    logger.debug(f"sending {return_data}")
-    return web.json_response(return_data)
+    res = AstronObjectResponse(
+        astron_obj.name,
+        astron_obj.mag,
+        astron_obj.size,
+        astron_obj.az,
+        astron_obj.alt,
+        astron_obj.ra,
+        astron_obj.dec,
+        datetime.strptime(str(observer.next_setting(astron_obj)), "%Y/%m/%d %H:%M:%S"),
+        datetime.strptime(str(observer.next_rising(astron_obj)), "%Y/%m/%d %H:%M:%S"),
+        when
+    )
+   
+    log.debug(f"get_astron_object_data: {res=}")
+    return res 
 
 
-@routes.get("/")
-async def index(request):
-    return web.FileResponse(os.path.join(public_dir, "index.html"))
-
-
-app.add_routes(routes)
-app.router.add_static("/", os.path.join(public_dir, "dist"))
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    web.run_app(app, host="0.0.0.0", port=8000)
+app = Litestar(
+    route_handlers=[search, get_astron_object_data],
+    static_files_config=[
+        StaticFilesConfig(
+            directories=[public_dir / "dist"],
+            path="/",
+            html_mode=True
+        ),
+    ]
+)

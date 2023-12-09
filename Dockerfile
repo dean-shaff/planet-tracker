@@ -1,15 +1,24 @@
-FROM python:3.7.3-stretch
+FROM dshaff/scatspotter-build:latest as builder
+WORKDIR /app
+COPY ./client /app/client
+WORKDIR /app/client
+# the alternative is trying to install nodejs, which is a big pain
+RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v3.3.6/tailwindcss-linux-arm64 && mv tailwindcss-linux-arm64 tailwindcss && chmod +x tailwindcss
+ENV PATH /app/client:$PATH
+RUN trunk build --release 
 
-RUN apt-get update && apt-get install -y curl
+FROM python:3.11.7-slim-bookworm
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-ENV PATH="/root/.poetry/bin:${PATH}"
+RUN apt-get update && apt-get install -y libssl-dev build-essential ca-certificates && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /planet-tracker
-COPY . /planet-tracker
+WORKDIR /app
+ENV POETRY_HOME=/opt/poetry
 
-RUN poetry install
+RUN python -m venv ${POETRY_HOME}
+RUN ${POETRY_HOME}/bin/pip install poetry 
 
-EXPOSE 8080
+COPY poetry.lock pyproject.toml app.py ./ 
+COPY --from=builder /app/client/dist /app/dist
+RUN ${POETRY_HOME}/bin/poetry install
 
-CMD ["poetry", "run", "gunicorn", "app:app", "--worker-class", "aiohttp.GunicornWebWorker", "--bind", "0.0.0.0:8080"]
+# CMD ["/opt/poetry/bin/poetry", "run", "granian", "--interface", "asgi", "app:app", "--host", "0.0.0.0", "--port", "8080"]

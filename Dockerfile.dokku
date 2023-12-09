@@ -1,0 +1,2 @@
+FROM dshaff/planet-tracker:latest 
+CMD /opt/poetry/bin/poetry run granian --interface asgi app:app --host 0.0.0.0 --port ${PORT}
