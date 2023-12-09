@@ -21,4 +21,4 @@ COPY poetry.lock pyproject.toml app.py ./
 COPY --from=builder /app/client/dist /app/dist
 RUN ${POETRY_HOME}/bin/poetry install
 
-# CMD ["/opt/poetry/bin/poetry", "run", "granian", "--interface", "asgi", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["/opt/poetry/bin/poetry", "run", "granian", "--interface", "asgi", "app:app", "--host", "0.0.0.0", "--port", "8080"]
