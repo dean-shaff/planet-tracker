@@ -7,7 +7,7 @@ RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/download/v3.3
 ENV PATH /app/client:$PATH
 RUN trunk build --release 
 
-FROM python:3.11.7-slim-bookworm
+FROM python:3.12.7-slim-bookworm
 
 RUN apt-get update && apt-get install -y libssl-dev build-essential ca-certificates && rm -rf /var/lib/apt/lists/*
 
