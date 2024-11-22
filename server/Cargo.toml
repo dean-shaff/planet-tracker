@@ -1,0 +1,31 @@
+[package]
+name = "planet-tracker"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+bindgen = "0.70.1"
+cc = "1.2.1"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "benchmark"
+path = "src/benchmark.rs"
+
+[[bin]]
+name = "main_pyo3"
+path = "src/main_pyo3.rs"
+
+[dependencies]
+anyhow = { version = "1.0.93", features = ["backtrace"] }
+axum = "0.7.9"
+chrono = { version = "0.4", features = ["serde"] }
+pyo3 = { version = "0.23.1", features = ["chrono"] }
+pyo3-ffi = "0.23.1"
+serde = { version = "1.0.215", features = ["derive"] }
+tokio = "1.41.1"
+libc = "0.2.0"
+thiserror = "2.0.3"
