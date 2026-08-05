@@ -1,6 +1,6 @@
 ## Planet Tracker Server
 
-A simple Flask app for tracking the positions of planets in the sky. This is
+A simple [Litestar](https://litestar.dev/) app for tracking the positions of planets in the sky. This is
 the server code. Head [here](https://github.com/dean-shaff/planet-tracker_client)
 for the Rust/leptos client.
 
