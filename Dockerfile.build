@@ -1,0 +1,6 @@
+FROM rust:slim-trixie as builder
+
+RUN apt-get update && apt-get install -y binaryen
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo install cargo-chef trunk --locked
+
